@@ -1,0 +1,22 @@
+###GET test
+GET http://localhost:3000/
+
+###Insert manager
+POST http://localhost:3000/add_manager
+Content-Type: application/json
+
+{
+    "manager_id":"26f0ab44-d1f5-492a-b1f2-7adac3b3d2e9",
+    "is_active": true
+}
+
+###create-user
+POST http://localhost:3000/create-user
+Content-Type: application/json
+
+{
+    "full_name": "John Doe",
+    "mob_num": "+91123457890",
+    "pan_num": "ABCDE123F",
+    "manager_id": "uuid-v4"
+}
