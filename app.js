@@ -73,12 +73,19 @@ app.post("/add_manager", async (req, res) => {
     res.status(500).send("Failed to add manager, manager_id already exists");
   }
 });
-
+// for testing if routing is working or not
 app.get("/", (req, res) => {
   res.send("Get working");
 });
 
-app.post("/create_user", async (req, res) => {
-  const { full_name, mob_num, pan_num, manager_id } = req.body;
-  res.send("user data is taken from request");
-});
+app.post("/create_user",async(req,res)=>{
+  const {full_name,mob_num,pan_num,manager_id}=req.body
+  try{
+    if(!full_name || !mob_num || !pan_num || !manager_id){
+      res.status(400).send("All fields are required")
+    }
+    //Validating mobile number using regex
+    const mob_num_reg=/^\+91\d{10}$/;
+    
+  }
+})
