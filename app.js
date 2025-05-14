@@ -78,14 +78,49 @@ app.get("/", (req, res) => {
   res.send("Get working");
 });
 
-app.post("/create_user",async(req,res)=>{
-  const {full_name,mob_num,pan_num,manager_id}=req.body
-  try{
-    if(!full_name || !mob_num || !pan_num || !manager_id){
-      res.status(400).send("All fields are required")
+app.post("/create_user", async (req, res) => {
+  const { full_name, mob_num, pan_num, manager_id } = req.body;
+  try {
+    if (!full_name || !mob_num || !pan_num || !manager_id) {
+      return res.status(400).send("All fields are required");
     }
     //Validating mobile number using regex
-    const mob_num_reg=/^\+91\d{10}$/;
-    
+    const mob_num_regex = /^\+91\d{10}$/;
+    if (!mob_num_regex.test(mob_num)) {
+      return res
+        .status(400)
+        .send("Invalid phone number format. Use +91 followed by 10 digits.");
+    }
+    //Validating Pan number
+    const pan = pan_num.toUpperCase(); //incase smallercase is given
+    const pan_num_regex = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+    if (!pan_num_regex.test(pan)) {
+      return res.status(400).send("Invalid PAN number format.");
+    }
+    //Validating manager exists and is_active,
+    const checkManagerQuery = `SELECT * FROM managers where manager_id=? AND is_active=1`;
+    const managerRes = await db.get(checkManagerQuery, [manager_id]);
+    if (!managerRes) {
+      return res.status(400).send("Manager doesn't exist or is not active");
+    }
+
+    //inserting the user data to users table i.e create user
+    const createdAt = new Date().toISOString();
+    const updatedAt = new Date().toISOString();
+
+    const insert_user_query = `INSERT INTO users (full_name,mob_num,pan_num,manager_id,created_at,updated_at)
+    VALUES (?,?,?,?,?,?)`;
+    await db.run(insert_user_query, [
+      full_name,
+      mob_num,
+      pan,
+      manager_id,
+      createdAt,
+      updatedAt,
+    ]);
+    res.status(200).send("User created successfully");
+  } catch (e) {
+    console.error(e.message);
+    res.status(500).send("Internal server error.");
   }
-})
+});
