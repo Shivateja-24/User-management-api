@@ -105,12 +105,14 @@ app.post("/create_user", async (req, res) => {
     }
 
     //inserting the user data to users table i.e create user
+    const userId = uuidv4();
     const createdAt = new Date().toISOString();
     const updatedAt = new Date().toISOString();
 
-    const insert_user_query = `INSERT INTO users (full_name,mob_num,pan_num,manager_id,created_at,updated_at)
-    VALUES (?,?,?,?,?,?)`;
+    const insert_user_query = `INSERT INTO users (user_id,full_name,mob_num,pan_num,manager_id,created_at,updated_at)
+    VALUES (?,?,?,?,?,?,?)`;
     await db.run(insert_user_query, [
+      userId,
       full_name,
       mob_num,
       pan,
@@ -118,9 +120,20 @@ app.post("/create_user", async (req, res) => {
       createdAt,
       updatedAt,
     ]);
-    res.status(200).send("User created successfully");
+    res.status(200).send("User created successfully", userId);
   } catch (e) {
     console.error(e.message);
     res.status(500).send("Internal server error.");
+  }
+});
+
+app.get("/users", async (req, res) => {
+  try {
+    const getUsersQuery = `SELECT * FROM users`;
+    const users = await db.all(getUsersQuery);
+    res.status(200).json({ users });
+  } catch (e) {
+    console.error(e.message);
+    res.status(500).send("Internal Server Error");
   }
 });

@@ -11,12 +11,15 @@ Content-Type: application/json
 }
 
 ###create-user
-POST http://localhost:3000/create-user
+POST http://localhost:3000/create_user
 Content-Type: application/json
 
 {
     "full_name": "John Doe",
-    "mob_num": "+91123457890",
-    "pan_num": "ABCDE123F",
-    "manager_id": "uuid-v4"
+    "mob_num": "+911234567890",
+    "pan_num": "ABCDE1234F",
+    "manager_id": "26f0ab44-d1f5-492a-b1f2-7adac3b3d2e9"
 }
+###
+GET http://localhost:3000/users
+
