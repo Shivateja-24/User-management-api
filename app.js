@@ -2,9 +2,7 @@ const express = require("express");
 const path = require("path");
 const app = express();
 app.use(express.json());
-
 const { v4: uuidv4 } = require("uuid");
-
 const { open } = require("sqlite");
 const sqlite3 = require("sqlite3");
 const dbPath = path.join(__dirname, "user-management.db");
@@ -139,7 +137,7 @@ app.post("/create_user", async (req, res) => {
     res.status(500).send("Internal server error.");
   }
 });
-
+//test
 app.get("/users", async (req, res) => {
   try {
     const getUsersQuery = `SELECT * FROM users`;
@@ -162,7 +160,7 @@ app.post("/get_users", async (req, res) => {
       param = user_id;
     } else if (mob_num) {
       const mob_regex = /^\+91\d{10}$/;
-      if (!mob_regex) {
+      if (!mob_regex.test(mob_num)) {
         return res
           .status(400)
           .send("Invalid phone number format. Use +91 followed by 10 digits");
@@ -178,5 +176,38 @@ app.post("/get_users", async (req, res) => {
   } catch (e) {
     console.error(e.message);
     res.status(500).send("Internal server error");
+  }
+});
+
+app.post("/delete_users", async (req, res) => {
+  try {
+    const { user_id, mob_num } = req.body;
+    let query = "";
+    let param = "";
+    if (user_id) {
+      query = `Select * from users where user_id=?`;
+      param = user_id;
+    } else if (mob_num) {
+      const mob_regex = /^\+91\d{10}$/;
+      if (!mob_regex) {
+        return res
+          .status(400)
+          .send("Invalid phone number format. Use +91 followed by 10 digits");
+      }
+      query = `Select * from users where mob_num=?`;
+      param = mob_num;
+    }
+    const user = await db.get(query, [param]);
+    if (!user) {
+      return res.status(400).send("User not Found");
+    }
+    const deleteQuery = user_id
+      ? `delete from users where user_id=?`
+      : `delete from users where mob_num=?`;
+    await db.run(deleteQuery, [param]);
+    res.status(200).send("User deleted successfully");
+  } catch (e) {
+    console.error(e.message);
+    res.status(500).send("Internal Error");
   }
 });
