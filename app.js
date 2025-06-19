@@ -24,7 +24,7 @@ const createTables = async () => {
       user_id TEXT PRIMARY KEY,
       full_name TEXT NOT NULL,
       mob_num TEXT NOT NULL,
-      pan_num TEXT NOT NULL,
+      pan_num TEXT NOT NULL ,
       manager_id TEXT,
       created_at TEXT,
       updated_at TEXT,
@@ -34,7 +34,9 @@ const createTables = async () => {
   `);
   console.log("table created successfully");
 };
-
+const changingTables = async () => {
+  await db.run;
+};
 const initializeDBAndServer = async () => {
   try {
     db = await open({
@@ -104,6 +106,15 @@ app.post("/create_user", async (req, res) => {
       return res.status(400).send("Manager doesn't exist or is not active");
     }
 
+    //checking duplicate entries
+    const checkDuplicateQuery = `SELECT * from users where mob_num=? or pan_num=?`;
+    const existingUser = await db.get(checkDuplicateQuery, [mob_num, pan]);
+    if (existingUser) {
+      return res
+        .status(400)
+        .send("User with same mobile number or PAN number already exists");
+    }
+
     //inserting the user data to users table i.e create user
     const userId = uuidv4();
     const createdAt = new Date().toISOString();
@@ -120,7 +131,9 @@ app.post("/create_user", async (req, res) => {
       createdAt,
       updatedAt,
     ]);
-    res.status(200).send("User created successfully", userId);
+    res
+      .status(200)
+      .json({ message: "User created successfully", user_id: userId });
   } catch (e) {
     console.error(e.message);
     res.status(500).send("Internal server error.");
@@ -135,5 +148,35 @@ app.get("/users", async (req, res) => {
   } catch (e) {
     console.error(e.message);
     res.status(500).send("Internal Server Error");
+  }
+});
+
+app.post("/get_users", async (req, res) => {
+  try {
+    const { user_id, mob_num, manager_id } = req.body;
+    let query = `Select * from users`;
+    let param = null;
+
+    if (user_id) {
+      query = `SELECT * from users where user_id=?`;
+      param = user_id;
+    } else if (mob_num) {
+      const mob_regex = /^\+91\d{10}$/;
+      if (!mob_regex) {
+        return res
+          .status(400)
+          .send("Invalid phone number format. Use +91 followed by 10 digits");
+      }
+      query = `Select * from users where mob_num=?`;
+      param = mob_num;
+    } else if (manager_id) {
+      query = "Select * from users where manager_id=?";
+      param = manager_id;
+    }
+    const users = param ? await db.all(query, [param]) : await db.all(query);
+    res.status(200).json({ users });
+  } catch (e) {
+    console.error(e.message);
+    res.status(500).send("Internal server error");
   }
 });
