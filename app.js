@@ -1,3 +1,9 @@
+const {
+  isValidMobile,
+  isValidPAN,
+  isValidManager,
+} = require("./utils/validators");
+
 const express = require("express");
 const path = require("path");
 const app = express();
@@ -71,10 +77,6 @@ app.post("/add_manager", async (req, res) => {
     res.status(500).send("Failed to add manager, manager_id already exists");
   }
 });
-// for testing if routing is working or not
-app.get("/", (req, res) => {
-  res.send("Get working");
-});
 
 app.post("/create_user", async (req, res) => {
   const { full_name, mob_num, pan_num, manager_id } = req.body;
@@ -82,29 +84,24 @@ app.post("/create_user", async (req, res) => {
     if (!full_name || !mob_num || !pan_num || !manager_id) {
       return res.status(400).send("All fields are required");
     }
-    //Validating mobile number using regex
-    const mob_num_regex = /^\+91\d{10}$/;
-    if (!mob_num_regex.test(mob_num)) {
+    //Validating mobile number, function is in validators.js
+    if (!isValidMobile(mob_num)) {
       return res
         .status(400)
         .send("Invalid phone number format. Use +91 followed by 10 digits.");
     }
     //Validating Pan number
-    const pan = pan_num.toUpperCase(); //incase smallercase is given
-    const pan_num_regex = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
-    if (!pan_num_regex.test(pan)) {
+    if (!isValidPAN(pan_num)) {
       return res.status(400).send("Invalid PAN number format.");
     }
     //Validating manager exists and is_active,
-    const checkManagerQuery = `SELECT * FROM managers where manager_id=? AND is_active=1`;
-    const managerRes = await db.get(checkManagerQuery, [manager_id]);
-    if (!managerRes) {
-      return res.status(400).send("Manager doesn't exist or is not active");
-    }
+    const isManagerValid = await isValidManager(manager_id, db);
+    if (!isManagerValid)
+      return res.status(400).send("Manager doesn't exist or is inactive");
 
     //checking duplicate entries
     const checkDuplicateQuery = `SELECT * from users where (mob_num=? or pan_num=?) and is_active=1`;
-    const existingUser = await db.get(checkDuplicateQuery, [mob_num, pan]);
+    const existingUser = await db.get(checkDuplicateQuery, [mob_num, pan_num]);
     if (existingUser) {
       return res
         .status(400)
@@ -122,7 +119,7 @@ app.post("/create_user", async (req, res) => {
       userId,
       full_name,
       mob_num,
-      pan,
+      pan_num,
       manager_id,
       createdAt,
       updatedAt,
@@ -146,8 +143,7 @@ app.post("/get_users", async (req, res) => {
       query = `SELECT * from users where user_id=?`;
       param = user_id;
     } else if (mob_num) {
-      const mob_regex = /^\+91\d{10}$/;
-      if (!mob_regex.test(mob_num)) {
+      if (!isValidMobile(mob_num)) {
         return res
           .status(400)
           .send("Invalid phone number format. Use +91 followed by 10 digits");
@@ -178,8 +174,7 @@ app.delete("/delete_users", async (req, res) => {
       query = `Select * from users where user_id=?`;
       param = user_id;
     } else if (mob_num) {
-      const mob_regex = /^\+91\d{10}$/;
-      if (!mob_regex) {
+      if (!isValidMobile(mob_num)) {
         return res
           .status(400)
           .send("Invalid phone number format. Use +91 followed by 10 digits");
@@ -213,8 +208,7 @@ app.put("/update_users", async (req, res) => {
   try {
     const { full_name, mob_num, pan_num, manager_id } = update_data;
     if (mob_num) {
-      const mob_num_regex = /^\+91\d{10}$/;
-      if (!mob_num_regex.test(mob_num)) {
+      if (!isValidMobile(mob_num)) {
         return res
           .status(400)
           .send("Invalid phone number format. Use +91 followed by 10 digits.");
@@ -222,21 +216,12 @@ app.put("/update_users", async (req, res) => {
     }
     //Validating Pan number
     if (pan_num) {
-      const pan = pan_num.toUpperCase(); //incase smallercase is given
-      const pan_num_regex = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
-      if (!pan_num_regex.test(pan)) {
+      if (!isValidMobile(pan_num)) {
         return res.status(400).send("Invalid PAN number format.");
       }
-      update_data.pan_num = pan;
     }
-    if (manager_id) {
-      const managerQuery = `SELECT * FROM managers WHERE manager_id = ? AND is_active = 1`;
-      const managerExists = await db.get(managerQuery, [manager_id]);
-      if (!managerExists) {
-        return res
-          .status(400)
-          .send("Provided manager_id is invalid or inactive");
-      }
+    if (manager_id && !(await isValidManager(manager_id, db))) {
+      return res.status(400).send("Provided manager_id is invalid or inactive");
     }
 
     // If only manager_id is being updated then proceeding to bulk update
