@@ -169,7 +169,7 @@ app.post("/get_users", async (req, res) => {
   }
 });
 
-app.post("/delete_users", async (req, res) => {
+app.delete("/delete_users", async (req, res) => {
   try {
     const { user_id, mob_num } = req.body;
     let query = "";

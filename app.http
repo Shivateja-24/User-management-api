@@ -20,21 +20,19 @@ Content-Type: application/json
     "pan_num": "AFFRE4321Z",
     "manager_id": "26f0ab44-d1f5-492a-b1f2-7adac3b3d2e9"
 }
-###
-GET http://localhost:3000/users
 
 ###
 POST http://localhost:3000/get_users
 Content-Type: application/json
+
 {
-    "is_active": 1
 }
 ###
-POST http://localhost:3000/delete_users
+DELETE http://localhost:3000/delete_users
 Content-Type: application/json
 
 {
-    "user_id": "a8e78e52-cefb-408b-85a2-59cfa213a01e"
+    "user_id": "0be55153-3bc4-4956-a1ff-89c7182465ed"
 }
 ###
 PUT http://localhost:3000/update_users
