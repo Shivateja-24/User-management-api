@@ -32,9 +32,7 @@ const createTables = async () => {
   `);
   console.log("table created successfully");
 };
-const changingTables = async () => {
-  await db.run;
-};
+
 const initializeDBAndServer = async () => {
   try {
     db = await open({
@@ -105,7 +103,7 @@ app.post("/create_user", async (req, res) => {
     }
 
     //checking duplicate entries
-    const checkDuplicateQuery = `SELECT * from users where mob_num=? or pan_num=?`;
+    const checkDuplicateQuery = `SELECT * from users where (mob_num=? or pan_num=?) and is_active=1`;
     const existingUser = await db.get(checkDuplicateQuery, [mob_num, pan]);
     if (existingUser) {
       return res
@@ -137,21 +135,10 @@ app.post("/create_user", async (req, res) => {
     res.status(500).send("Internal server error.");
   }
 });
-//test
-app.get("/users", async (req, res) => {
-  try {
-    const getUsersQuery = `SELECT * FROM users`;
-    const users = await db.all(getUsersQuery);
-    res.status(200).json({ users });
-  } catch (e) {
-    console.error(e.message);
-    res.status(500).send("Internal Server Error");
-  }
-});
 
 app.post("/get_users", async (req, res) => {
   try {
-    const { user_id, mob_num, manager_id } = req.body;
+    const { user_id, mob_num, manager_id, is_active } = req.body;
     let query = `Select * from users`;
     let param = null;
 
@@ -168,8 +155,11 @@ app.post("/get_users", async (req, res) => {
       query = `Select * from users where mob_num=?`;
       param = mob_num;
     } else if (manager_id) {
-      query = "Select * from users where manager_id=?";
+      query = `Select * from users where manager_id=?`;
       param = manager_id;
+    } else if (is_active === "1" || is_active === "0") {
+      query = `Select * from users where is_active=?`;
+      param = Number(is_active);
     }
     const users = param ? await db.all(query, [param]) : await db.all(query);
     res.status(200).json({ users });
@@ -209,5 +199,118 @@ app.post("/delete_users", async (req, res) => {
   } catch (e) {
     console.error(e.message);
     res.status(500).send("Internal Error");
+  }
+});
+
+app.put("/update_users", async (req, res) => {
+  const { user_ids, update_data } = req.body;
+  if (user_ids.length === 0) {
+    return res.status(400).send("User ids required");
+  }
+  if (Object.keys(update_data).length < 1) {
+    return res.status(400).send("User Updated data required");
+  }
+  try {
+    const { full_name, mob_num, pan_num, manager_id } = update_data;
+    if (mob_num) {
+      const mob_num_regex = /^\+91\d{10}$/;
+      if (!mob_num_regex.test(mob_num)) {
+        return res
+          .status(400)
+          .send("Invalid phone number format. Use +91 followed by 10 digits.");
+      }
+    }
+    //Validating Pan number
+    if (pan_num) {
+      const pan = pan_num.toUpperCase(); //incase smallercase is given
+      const pan_num_regex = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+      if (!pan_num_regex.test(pan)) {
+        return res.status(400).send("Invalid PAN number format.");
+      }
+      update_data.pan_num = pan;
+    }
+    if (manager_id) {
+      const managerQuery = `SELECT * FROM managers WHERE manager_id = ? AND is_active = 1`;
+      const managerExists = await db.get(managerQuery, [manager_id]);
+      if (!managerExists) {
+        return res
+          .status(400)
+          .send("Provided manager_id is invalid or inactive");
+      }
+    }
+
+    // If only manager_id is being updated then proceeding to bulk update
+    if (Object.keys(update_data).length === 1 && manager_id) {
+      for (const id of user_ids) {
+        const user = await db.get(
+          `SELECT * FROM users WHERE user_id = ? AND is_active = 1`,
+          [id]
+        );
+        if (!user) {
+          return res.status(404).send(`User with user_id ${id} not found`);
+        }
+
+        // Marking current as inactive
+        await db.run(
+          `UPDATE users SET is_active = 0, updated_at = ? WHERE user_id = ?`,
+          [new Date().toISOString(), id]
+        );
+
+        // Insert new row with new manager_id and same data
+        const newUserId = uuidv4();
+        const insertQuery = `
+          INSERT INTO users (user_id, full_name, mob_num, pan_num, manager_id, created_at, updated_at, is_active)
+          VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+        `;
+        await db.run(insertQuery, [
+          newUserId,
+          user.full_name,
+          user.mob_num,
+          user.pan_num,
+          manager_id,
+          new Date().toISOString(),
+          new Date().toISOString(),
+        ]);
+      }
+      return res
+        .status(200)
+        .send("Users' manager_id updated (new row created)");
+    }
+
+    // If full update (not just manager_id)
+    for (const id of user_ids) {
+      const user = await db.get(
+        `SELECT * FROM users WHERE user_id = ? AND is_active = 1`,
+        [id]
+      );
+      if (!user) {
+        return res.status(404).send(`User with user_id ${id} not found`);
+      }
+
+      const updateQuery = `
+        UPDATE users
+        SET
+          full_name = COALESCE(?, full_name),
+          mob_num = COALESCE(?, mob_num),
+          pan_num = COALESCE(?, pan_num),
+          manager_id = COALESCE(?, manager_id),
+          updated_at = ?
+        WHERE user_id = ?
+      `;
+
+      await db.run(updateQuery, [
+        full_name || user.full_name,
+        mob_num || user.mob_num,
+        pan_num || user.pan_num,
+        manager_id || user.manager_id,
+        new Date().toISOString(),
+        id,
+      ]);
+    }
+
+    res.status(200).send("User(s) updated successfully");
+  } catch (e) {
+    console.error(e.message);
+    res.status(500).send("Internal Server Error");
   }
 });

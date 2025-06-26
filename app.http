@@ -6,7 +6,7 @@ POST http://localhost:3000/add_manager
 Content-Type: application/json
 
 {
-    "manager_id":"26f0ab44-d1f5-492a-b1f2-7adac3b3d2e9",
+    "manager_id":"e6ae2c74-f9ee-4ad8-9ec4-9866108d8b9b",
     "is_active": true
 }
 
@@ -15,9 +15,9 @@ POST http://localhost:3000/create_user
 Content-Type: application/json
 
 {
-    "full_name": "Robert",
-    "mob_num": "+911234587989",
-    "pan_num": "ACHRE4321Z",
+    "full_name": "Josephine Langford",
+    "mob_num": "+911234547989",
+    "pan_num": "AFFRE4321Z",
     "manager_id": "26f0ab44-d1f5-492a-b1f2-7adac3b3d2e9"
 }
 ###
@@ -26,7 +26,48 @@ GET http://localhost:3000/users
 ###
 POST http://localhost:3000/get_users
 Content-Type: application/json
+{
+    "is_active": 1
+}
+###
+POST http://localhost:3000/delete_users
+Content-Type: application/json
 
 {
-    
+    "user_id": "a8e78e52-cefb-408b-85a2-59cfa213a01e"
 }
+###
+PUT http://localhost:3000/update_users
+Content-Type: application/json
+
+{
+  "user_ids": ["93c50c4e-9ac7-4f20-88e9-32f5fa1618b5"],
+  "update_data": {
+    "full_name": "Robert Joseph",
+    "mob_num": "+911234567800"
+  }
+}
+###
+PUT http://localhost:3000/update_users
+Content-Type: application/json
+
+{
+  "user_ids": ["93c50c4e-9ac7-4f20-88e9-32f5fa1618b5"],
+  "update_data": {
+    "manager_id": "e6ae2c74-f9ee-4ad8-9ec4-9866108d8b9b"
+  }
+}
+###
+PUT http://localhost:3000/update_users
+Content-Type: application/json
+
+{
+  "user_ids": [
+    "5f151dd0-35cc-4f87-8a30-33e9c91e6e21",
+    "f6040989-3eca-44a3-82f7-e99ffae128e7"
+  ],
+  "update_data": {
+    "manager_id": "e6ae2c74-f9ee-4ad8-9ec4-9866108d8b9b"
+  }
+}
+###
